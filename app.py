@@ -26,7 +26,7 @@ def merge_task(self, audio_filename, image_filename):
     temp_dir = '/tmp'
     output_filename = os.path.join(temp_dir, f"output_{uuid.uuid4()}.mp4")
     
-    # Check if the audio and image files exist before processing
+    # Verify that the input files exist
     if not os.path.exists(audio_filename):
         logger.error(f"Audio file not found: {audio_filename}")
         raise Exception("Audio file not found")
@@ -34,13 +34,16 @@ def merge_task(self, audio_filename, image_filename):
         logger.error(f"Image file not found: {image_filename}")
         raise Exception("Image file not found")
     
-    # Optimized FFmpeg command with lower resolution (scale to 320x240)
+    # FFmpeg command optimized for 720p output:
+    # The scale filter scales the image to fit within 1280x720 while preserving aspect ratio,
+    # and the pad filter centers it within a 1280x720 frame.
     cmd = [
         'ffmpeg', '-y',
         '-loop', '1', '-i', image_filename,
         '-i', audio_filename,
-        '-vf', 'scale=320:240',
-        '-c:v', 'libx264', '-tune', 'stillimage',
+        '-vf', 'scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(1280-iw)/2:(720-ih)/2',
+        '-r', '25',
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'stillimage',
         '-c:a', 'aac', '-b:a', '192k',
         '-pix_fmt', 'yuv420p',
         '-shortest',
